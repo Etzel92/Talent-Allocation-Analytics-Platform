@@ -1,0 +1,59 @@
+repos:
+  # Higiene básica (solo archivos de texto, excluye binarios)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: >
+          \.(png|jpe?g|gif|ico|svg|pdf|zip|gz|tgz|bz2|7z|woff2?)$
+      - id: trailing-whitespace
+        exclude: >
+          \.(png|jpe?g|gif|ico|svg|pdf|zip|gz|tgz|bz2|7z|woff2?)$
+      - id: check-merge-conflict
+
+  # API: Ruff + Black
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^api/
+      - id: ruff-format
+        files: ^api/
+
+  - repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+      - id: black
+        files: ^api/
+
+  # WEB: Prettier (archivos de frontend)
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        additional_dependencies: ["prettier@3.3.3"]
+        files: ^web/.*\.(ts|tsx|js|jsx|json|css|md|html)$
+
+  # WEB: ESLint (ESLint 9 flat config, ejecuta sobre /web)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.37.0
+    hooks:
+      - id: eslint
+        args:
+          - "--config"
+          - "web/eslint.config.js"
+          - "web/src"           # 👈 lint solo al código, no a la config
+        pass_filenames: false    # 👈 no pasar paths individuales
+        files: ^web/.*\.(ts|tsx|js|jsx)$
+        additional_dependencies:
+          - "eslint@9.12.0"
+          - "@eslint/js@9.12.0"
+          - "typescript@5.6.3"
+          - "@typescript-eslint/parser@8.8.1"
+          - "@typescript-eslint/eslint-plugin@8.8.1"
+          - "eslint-plugin-react@7.37.1"
+          - "eslint-plugin-react-hooks@4.6.2"
+          - "eslint-plugin-import@2.29.1"
+          - "eslint-config-prettier@9.1.0"
+          - "globals@15.9.0"

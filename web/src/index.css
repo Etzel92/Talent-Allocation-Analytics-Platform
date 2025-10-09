@@ -1,0 +1,30 @@
+/* Reset básico y layout neutral para MUI */
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Tipografía base (si usas Roboto, ver paso 3) */
+body {
+  font-family: Roboto, Arial, sans-serif;
+  background: #f7f7f8;
+  color: #111;
+}
+
+/* Evita que el body esté centrado por defecto (lo hacía el template de Vite) */
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Enlaces neutros */
+a {
+  color: inherit;
+  text-decoration: none;
+}
