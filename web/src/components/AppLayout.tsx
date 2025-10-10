@@ -14,7 +14,7 @@ import {
   Avatar,
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BarChart2, Users, LogOut } from 'lucide-react';
+import { BarChart2, Users, LogOut, Briefcase } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
 
 const drawerWidth = 240;
@@ -27,6 +27,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const items = [
     { label: 'Employees', icon: <Users size={20} />, to: '/employees' },
     { label: 'Analytics', icon: <BarChart2 size={20} />, to: '/analytics' },
+    { label: 'Assignments', icon: <Briefcase size={20} />, to: '/assignments' }, // 👈 nuevo
   ];
 
   return (
@@ -54,7 +55,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Typography variant="body2" sx={{ mr: 2, color: 'text.secondary' }}>
             {role}
           </Typography>
-          <Avatar sx={{ width: 32, height: 32, mr: 1 }}>{(role ?? 'HR')[0]}</Avatar>
+          <Avatar sx={{ width: 32, height: 32, mr: 1 }}>{(role ?? 'H')[0]}</Avatar>
           <IconButton aria-label="Cerrar sesión" onClick={logout}>
             <LogOut size={20} />
           </IconButton>

@@ -1,63 +1,73 @@
-// web/src/api/reports.ts
-const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+import { API, auth, toQuery } from "./core";
 
-function auth(): Headers {
-  const h = new Headers();
-  const token =
-    localStorage.getItem("access_token") || localStorage.getItem("token");
-  if (token) h.set("Authorization", `Bearer ${token}`);
-  return h;
-}
-
-function toQuery(params: Record<string, unknown> = {}): string {
-  const usp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") usp.append(k, String(v));
-  }
-  return usp.toString();
-}
+export type DistItem = { key: string; count: number };
+export type CorrPoint = { x: number; y: number };
 
 export async function getDistribution(
   dimension: string,
   params: Record<string, unknown> = {}
-) {
+): Promise<DistItem[]> {
   const qs = toQuery({ dimension, ...params });
   const res = await fetch(`${API}/reports/distribution?${qs}`, {
     headers: auth(),
   });
   if (!res.ok) throw new Error(`distribution ${res.status}`);
-  return res.json() as Promise<Array<{ key: string; count: number }>>;
+  return res.json();
 }
 
-export async function getCorrelation(params: Record<string, unknown> = {}) {
+export async function getCorrelation(
+  params: Record<string, unknown> = {}
+): Promise<CorrPoint[]> {
   const qs = toQuery(params);
   const res = await fetch(`${API}/reports/correlation?${qs}`, {
     headers: auth(),
   });
   if (!res.ok) throw new Error(`correlation ${res.status}`);
-  return res.json() as Promise<Array<{ x: number; y: number }>>;
+  return res.json();
 }
 
 export async function getLeaveProbability(
   params: Record<string, unknown> = {}
-) {
+): Promise<{ probability: number }> {
   const qs = toQuery(params);
   const res = await fetch(`${API}/reports/leave_probability?${qs}`, {
     headers: auth(),
   });
   if (!res.ok) throw new Error(`leave_probability ${res.status}`);
-  return res.json() as Promise<{ probability: number }>;
+  return res.json();
 }
 
-export async function exportCsv(params: Record<string, unknown> = {}) {
+export async function exportCsv(
+  params: Record<string, unknown> = {}
+): Promise<void> {
   const qs = toQuery(params);
-  const res = await fetch(`${API}/reports/export?${qs}`, { headers: auth() });
+  const res = await fetch(`${API}/reports/export?${qs}`, {
+    headers: auth(),
+  });
   if (!res.ok) throw new Error(`export ${res.status}`);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "report.csv";
+  a.download = "employees_export.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportPreset(
+  kind: "diversity" | "attrition" | "talent",
+  params: Record<string, unknown> = {}
+): Promise<void> {
+  const qs = toQuery({ kind, ...params });
+  const res = await fetch(`${API}/reports/export_preset?${qs}`, {
+    headers: auth(),
+  });
+  if (!res.ok) throw new Error(`export_preset ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${kind}_report.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

@@ -1,28 +1,17 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-  Typography,
-  Alert,
-  Skeleton,
+  Box, Button, Card, CardContent, Chip, Stack, Typography,
+  Alert, Skeleton,
 } from '@mui/material';
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ScatterChart,
-  Scatter,
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ScatterChart, Scatter,
 } from 'recharts';
-import { getDistribution, getCorrelation, getLeaveProbability, exportCsv } from '../../api/reports';
+import {
+  getDistribution, getCorrelation, getLeaveProbability,
+  exportCsv, exportPreset,
+} from '../../api/reports';
 
 type DistItem = { key: string; count: number };
 type CorrPoint = { x: number; y: number };
@@ -37,31 +26,55 @@ const DIMENSIONS = [
 export default function Analytics() {
   const [dim, setDim] = React.useState<(typeof DIMENSIONS)[number]['key']>('gender');
 
-  // Distribución (según dimensión seleccionada)
+  // Distribución por dimensión (cache 60s, no refetch on focus)
   const dist = useQuery<DistItem[]>({
     queryKey: ['dist', dim],
     queryFn: () => getDistribution(dim),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (prev) => prev, // evita parpadeo
   });
 
-  // KPIs y gráficos adicionales
   const corr = useQuery<CorrPoint[]>({
     queryKey: ['corr'],
     queryFn: () => getCorrelation(),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (prev) => prev,
   });
 
   const leaveProb = useQuery<{ probability: number }>({
     queryKey: ['leaveProb'],
     queryFn: () => getLeaveProbability(),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (prev) => prev,
   });
 
   const leaveDist = useQuery<DistItem[]>({
     queryKey: ['leaveDist'],
     queryFn: () => getDistribution('leave_or_not'),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (prev) => prev,
   });
 
   const benched = useQuery<DistItem[]>({
     queryKey: ['benched'],
     queryFn: () => getDistribution('ever_benched'),
+    staleTime: 60_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    placeholderData: (prev) => prev,
   });
 
   const total = React.useMemo(
@@ -75,14 +88,22 @@ export default function Analytics() {
     return yes?.count ?? 0;
   }, [benched.data]);
 
+  const maxX = React.useMemo(
+    () => Math.max(1, Math.ceil(Math.max(...((corr.data ?? []).map(p => p.x || 0)), 0))),
+    [corr.data],
+  );
+
   return (
     <Box>
-      {/* Encabezado */}
+      {/* Encabezado / exportes */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5">Analytics</Typography>
-        <Button variant="outlined" onClick={() => exportCsv({})}>
-          Exportar CSV
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={() => exportPreset('diversity')}>Reporte diversidad</Button>
+          <Button variant="outlined" onClick={() => exportPreset('attrition')}>Reporte rotación</Button>
+          <Button variant="outlined" onClick={() => exportPreset('talent')}>Reporte talento</Button>
+          <Button variant="contained" onClick={() => exportCsv({})}>Exportar CSV</Button>
+        </Stack>
       </Stack>
 
       {/* Selector de dimensión */}
@@ -138,7 +159,7 @@ export default function Analytics() {
         </Card>
       </Stack>
 
-      {/* KPIs: Benched y Leave */}
+      {/* KPIs */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <Card sx={{ flex: 1 }}>
           <CardContent>
@@ -189,58 +210,49 @@ export default function Analytics() {
 
       {/* Correlación experiencia vs tier */}
       <Card>
-  <CardContent>
-    <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
-      Correlación: Experiencia (x) vs Payment Tier (y)
-    </Typography>
-    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-      Puntos: {corr.data?.length ?? 0}
-    </Typography>
+        <CardContent>
+          <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+            Correlación: Experiencia (x) vs Payment Tier (y)
+          </Typography>
+          <Typography variant="caption" sx={{ color: "text.secondary" }}>
+            Puntos: {corr.data?.length ?? 0}
+          </Typography>
 
-    <Box sx={{ height: 300, mt: 1 }}>
-      {corr.isLoading ? (
-        <Skeleton variant="rounded" height={300} />
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          <ScatterChart>
-            <CartesianGrid />
-            <XAxis
-              type="number"
-              dataKey="x"
-              name="Experience (yrs)"
-              domain={[
-                0,
-                Math.max(1, Math.ceil(Math.max(...(corr.data ?? []).map(p => p.x || 0))))
-              ]}
-              allowDecimals={false}
-              tickCount={(Math.max(...(corr.data ?? []).map(p => p.x || 0)) || 1) + 1}
-            />
-            <YAxis
-              type="number"
-              dataKey="y"
-              name="Tier"
-              domain={[1, 3]}
-              ticks={[1, 2, 3]}
-              allowDecimals={false}
-            />
-            <Tooltip
-              formatter={(val: any, name: string) =>
-                name === "y" ? [`${val}`, "Tier"] : [`${val} yrs`, "Experience"]
-              }
-            />
-            <Scatter
-              data={corr.data ?? []}
-              shape="circle"
-              // tamaño y opacidad suaves
-              fillOpacity={0.85}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
-      )}
-    </Box>
-  </CardContent>
-</Card>
-
+          <Box sx={{ height: 300, mt: 1 }}>
+            {corr.isLoading ? (
+              <Skeleton variant="rounded" height={300} />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart>
+                  <CartesianGrid />
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    name="Experience (yrs)"
+                    domain={[0, maxX]}
+                    allowDecimals={false}
+                    tickCount={maxX + 1}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="y"
+                    name="Tier"
+                    domain={[1, 3]}
+                    ticks={[1, 2, 3]}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    formatter={(val: any, name: string) =>
+                      name === "y" ? [`${val}`, "Tier"] : [`${val} yrs`, "Experience"]
+                    }
+                  />
+                  <Scatter data={corr.data ?? []} shape="circle" fillOpacity={0.85} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
     </Box>
   );
 }

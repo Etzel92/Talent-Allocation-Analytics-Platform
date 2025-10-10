@@ -1,22 +1,20 @@
-from pydantic import BaseModel
+from typing import Optional
 
-# Compatibilidad Pydantic:
-# - v1: Config con orm_mode = True
-# - v2: ConfigDict(from_attributes=True)
+# Compatibilidad Pydantic v1/v2 con una base común
 try:
-    # Pydantic v2
-    from pydantic import ConfigDict
+    from pydantic import BaseModel, ConfigDict
 
-    _MODEL_CONFIG = {"model_config": ConfigDict(from_attributes=True)}
+    class ORMModel(BaseModel):
+        model_config = ConfigDict(from_attributes=True)  # v2
 except Exception:
-    # Pydantic v1
-    class _Cfg:
-        orm_mode = True
+    from pydantic import BaseModel as _BaseModel
 
-    _MODEL_CONFIG = {"Config": _Cfg}
+    class ORMModel(_BaseModel):  # v1
+        class Config:
+            orm_mode = True
 
 
-class EmployeeOut(BaseModel):
+class EmployeeOut(ORMModel):
     id: int
     education: str
     joining_year: int
@@ -25,30 +23,29 @@ class EmployeeOut(BaseModel):
     age: int
     gender: str
     ever_benched: str
-    years_experience: int
+    # 👇 lo que expone el API (no years_experience)
+    experience_in_current_domain: int
     leave_or_not: int
-    # aplica config según versión
-    locals().update(_MODEL_CONFIG)
 
 
-class Filters(BaseModel):
-    city: str | None = None
-    gender: str | None = None
-    age_min: int | None = None
-    age_max: int | None = None
-    education: str | None = None
-    payment_tier: int | None = None
-    joining_year: int | None = None
-    ever_benched: str | None = None  # "Yes"/"No"
-    leave_or_not: int | None = None  # 0/1
+class Filters(ORMModel):
+    city: Optional[str] = None
+    gender: Optional[str] = None
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
+    education: Optional[str] = None
+    payment_tier: Optional[int] = None
+    joining_year: Optional[int] = None
+    ever_benched: Optional[str] = None  # "Yes"/"No"
+    leave_or_not: Optional[int] = None  # 0/1
 
 
-class Token(BaseModel):
+class Token(ORMModel):
     access_token: str
     token_type: str = "bearer"
     role: str
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(ORMModel):
     email: str
     password: str

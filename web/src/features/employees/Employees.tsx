@@ -1,3 +1,4 @@
+// web/src/pages/Employees.tsx
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../shared/lib/axios';
@@ -8,8 +9,10 @@ import AddIcon from '@mui/icons-material/Add';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import FiltersBar, { type Filters } from './Filters';
 import NewEmployeeDialog from './NewEmployeeDialog';
+import BenchHistoryDialog from './BenchHistoryDialog'; // <-- diálogo de bench
 
 type EmployeeUI = {
+  Id: number;
   Education: string;
   JoiningYear: number;
   City: string;
@@ -23,6 +26,7 @@ type EmployeeUI = {
 
 // 🔧 normaliza cualquier esquema que devuelva el backend
 const normalizeEmployee = (r: any): EmployeeUI => ({
+  Id: r.id ?? r.Id ?? 0,
   Education: r.Education ?? r.education ?? '',
   JoiningYear: r.JoiningYear ?? r.joining_year ?? r.joiningYear ?? 0,
   City: r.City ?? r.city ?? '',
@@ -49,6 +53,10 @@ export default function Employees() {
   const role = (localStorage.getItem('role') || '').toUpperCase();
   const canCreate = role === 'HR' || role === 'MANAGER';
 
+  // Diálogo Historial Bench
+  const [benchOpen, setBenchOpen] = useState(false);
+  const [benchEmpId, setBenchEmpId] = useState<number>();
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['employees', filters],
     queryFn: async () => {
@@ -72,25 +80,40 @@ export default function Employees() {
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
 
-  const cols = useMemo<GridColDef<EmployeeUI>[]>(
-    () => [
-      { field: 'Education', headerName: 'Education', flex: 1 },
-      { field: 'JoiningYear', headerName: 'Joining', width: 110, type: 'number' },
-      { field: 'City', headerName: 'City', flex: 1 },
-      { field: 'PaymentTier', headerName: 'Tier', width: 90, type: 'number' },
-      { field: 'Age', headerName: 'Age', width: 90, type: 'number' },
-      { field: 'Gender', headerName: 'Gender', width: 110 },
-      { field: 'EverBenched', headerName: 'Benched', width: 110 },
-      {
-        field: 'ExperienceInCurrentDomain',
-        headerName: 'Experience',
-        width: 130,
-        type: 'number',
-      },
-      { field: 'LeaveOrNot', headerName: 'Leave', width: 90, type: 'number' },
-    ],
-    [],
-  );
+  const cols = useMemo<GridColDef<EmployeeUI>[]>(() => [
+    { field: 'Education', headerName: 'Education', flex: 1 },
+    { field: 'JoiningYear', headerName: 'Joining', width: 110, type: 'number' },
+    { field: 'City', headerName: 'City', flex: 1 },
+    { field: 'PaymentTier', headerName: 'Tier', width: 90, type: 'number' },
+    { field: 'Age', headerName: 'Age', width: 90, type: 'number' },
+    { field: 'Gender', headerName: 'Gender', width: 110 },
+    { field: 'EverBenched', headerName: 'Benched', width: 110 },
+    {
+      field: 'ExperienceInCurrentDomain',
+      headerName: 'Experience',
+      width: 130,
+      type: 'number',
+    },
+    { field: 'LeaveOrNot', headerName: 'Leave', width: 90, type: 'number' },
+    {
+      field: 'actions',
+      headerName: 'Acciones',
+      width: 130,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          onClick={() => {
+            setBenchEmpId(params.row.Id);
+            setBenchOpen(true);
+          }}
+        >
+          Historial
+        </Button>
+      ),
+    },
+  ], []);
 
   const handleExport = () => {
     const a = document.createElement('a');
@@ -141,7 +164,8 @@ export default function Employees() {
       ) : (
         <Paper sx={{ height: 520 }}>
           <DataGrid
-            rows={rows.map((r, i) => ({ id: i, ...r }))}
+            rows={rows}
+            getRowId={(r) => r.Id} // <-- usa el Id real del backend
             columns={cols}
             disableRowSelectionOnClick
             density="compact"
@@ -160,6 +184,15 @@ export default function Employees() {
         onClose={() => setOpenNew(false)}
         onCreated={handleCreated}
       />
+
+      {/* Diálogo de historial de bench */}
+      {benchEmpId !== undefined && (
+        <BenchHistoryDialog
+          open={benchOpen}
+          onClose={() => setBenchOpen(false)}
+          employeeId={benchEmpId}
+        />
+      )}
     </Container>
   );
 }

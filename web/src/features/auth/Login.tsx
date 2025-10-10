@@ -19,7 +19,7 @@ export default function Login() {
   const onSubmit = async (data: FormData) => {
     try {
       const res = await api.post('/auth/login', data);
-      // backend: { access_token, role }
+     
       login(res.data.access_token, res.data.role);
     } catch (e: any) {
       alert(e?.response?.data?.detail || 'No se pudo iniciar sesión');

@@ -1,33 +1,37 @@
-from typing import Annotated
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import Employee
+from app.db.models import Employee, RoleEnum
 from app.db.session import get_db
 from app.core.deps import get_current_user, require_roles
-from app.db.models import RoleEnum
 from app.schemas import EmployeeOut
+from pydantic import BaseModel
 
-from fastapi import Depends
-router = APIRouter(prefix="/employees", tags=["employees"], dependencies=[Depends(get_current_user)])
+router = APIRouter(
+    prefix="/employees",
+    tags=["employees"],
+    dependencies=[Depends(get_current_user)],
+)
 
-# Alias tipado para la sesión con Depends (evita B008)
 DbSess = Annotated[Session, Depends(get_db)]
 
 
 def apply_filters(
     q,
-    city: str | None,
-    gender: str | None,
-    age_min: int | None,
-    age_max: int | None,
-    education: str | None,
-    payment_tier: int | None,
-    joining_year: int | None,
-    ever_benched: str | None,
-    leave_or_not: int | None,
+    city: Optional[str],
+    gender: Optional[str],
+    age_min: Optional[int],
+    age_max: Optional[int],
+    education: Optional[str],
+    payment_tier: Optional[int],
+    joining_year: Optional[int],
+    ever_benched: Optional[str],
+    leave_or_not: Optional[int],
+    experience_min: Optional[int] = None,
+    experience_max: Optional[int] = None,
 ):
     if city:
         q = q.filter(Employee.city == city)
@@ -38,7 +42,6 @@ def apply_filters(
     if age_max is not None:
         q = q.filter(Employee.age <= age_max)
     if education:
-        # antes: igualdad estricta; mejor coincidencia flexible
         q = q.filter(Employee.education.ilike(f"%{education}%"))
     if payment_tier is not None:
         q = q.filter(Employee.payment_tier == payment_tier)
@@ -48,23 +51,29 @@ def apply_filters(
         q = q.filter(Employee.ever_benched == ever_benched)
     if leave_or_not is not None:
         q = q.filter(Employee.leave_or_not == leave_or_not)
+    if experience_min is not None:
+        q = q.filter(Employee.experience_in_current_domain >= experience_min)
+    if experience_max is not None:
+        q = q.filter(Employee.experience_in_current_domain <= experience_max)
     return q
 
 
-@router.get("", response_model=list[EmployeeOut])
+@router.get("", response_model=List[EmployeeOut])
 def list_employees(
     response: Response,
-    city: str | None = None,
-    gender: str | None = None,
-    age_min: int | None = None,
-    age_max: int | None = None,
-    education: str | None = None,
-    payment_tier: int | None = None,
-    joining_year: int | None = None,
-    ever_benched: str | None = None,
-    leave_or_not: int | None = None,
+    city: Optional[str] = None,
+    gender: Optional[str] = None,
+    age_min: Optional[int] = None,
+    age_max: Optional[int] = None,
+    education: Optional[str] = None,
+    payment_tier: Optional[int] = None,
+    joining_year: Optional[int] = None,
+    ever_benched: Optional[str] = None,
+    leave_or_not: Optional[int] = None,
+    experience_min: Optional[int] = None,
+    experience_max: Optional[int] = None,
     offset: int = Query(0, ge=0),
-    limit: int = Query(100000, ge=1, le=100000),  # ← adiós 1000 fijo, ahora configurable
+    limit: int = Query(100000, ge=1, le=100000),
     db: DbSess = None,
 ):
     q = db.query(Employee)
@@ -79,21 +88,18 @@ def list_employees(
         joining_year,
         ever_benched,
         leave_or_not,
+        experience_min,
+        experience_max,
     )
 
-    # total con filtros aplicados (sin límite)
     total = q.with_entities(func.count()).scalar()
-
-    # pagina resultados
-    items = q.order_by(Employee.joining_year.desc()).offset(offset).limit(limit).all()
-
-    # expón el total para el front (nuestro front ya lo lee si está)
+    items = (
+        q.order_by(Employee.joining_year.desc(), Employee.id.desc())
+         .offset(offset).limit(limit).all()
+    )
     response.headers["X-Total-Count"] = str(total)
-
     return items
 
-
-from pydantic import BaseModel
 
 class EmployeeCreate(BaseModel):
     education: str
@@ -102,11 +108,16 @@ class EmployeeCreate(BaseModel):
     payment_tier: int
     age: int
     gender: str
-    ever_benched: str
-    years_experience: int
-    leave_or_not: int
+    ever_benched: str  # "Yes" | "No"
+    experience_in_current_domain: int
+    leave_or_not: int  # 0 | 1
 
-@router.post("", dependencies=[Depends(require_roles(RoleEnum.HR, RoleEnum.MANAGER))])
+
+@router.post(
+    "",
+    response_model=EmployeeOut,
+    dependencies=[Depends(require_roles(RoleEnum.HR, RoleEnum.MANAGER))],
+)
 def create_employee(payload: EmployeeCreate, db: DbSess):
     obj = Employee(
         education=payload.education,
@@ -116,7 +127,7 @@ def create_employee(payload: EmployeeCreate, db: DbSess):
         age=payload.age,
         gender=payload.gender,
         ever_benched=payload.ever_benched,
-        years_experience=payload.years_experience,
+        experience_in_current_domain=payload.experience_in_current_domain,
         leave_or_not=payload.leave_or_not,
     )
     db.add(obj)
