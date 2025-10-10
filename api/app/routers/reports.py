@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import Float, cast, func
 from sqlalchemy.orm import Session
@@ -10,11 +10,13 @@ from sqlalchemy.orm import Session
 from app.db.models import Employee
 from app.db.session import get_db
 from app.core.deps import get_current_user
-from fastapi import Depends
-
 from app.routers.employees import apply_filters
 
-router = APIRouter(prefix="/reports", tags=["reports"], dependencies=[Depends(get_current_user)])
+router = APIRouter(
+    prefix="/reports",
+    tags=["reports"],
+    dependencies=[Depends(get_current_user)],
+)
 
 DbSess = Annotated[Session, Depends(get_db)]
 
@@ -28,10 +30,11 @@ _ALLOWED_BY = {
     "leave_or_not",
 }
 
-
+# ---------- DISTRIBUTION ----------
 @router.get("/distribution")
 def distribution(
-    by: str = "gender",
+    dimension: str | None = None,
+    by: str | None = None,
     city: str | None = None,
     gender: str | None = None,
     age_min: int | None = None,
@@ -43,10 +46,14 @@ def distribution(
     leave_or_not: int | None = None,
     db: DbSess = None,
 ):
-    if by not in _ALLOWED_BY:
-        by = "gender"
-    col = getattr(Employee, by)
-    q = db.query(col.label("key"), func.count(Employee.id).label("count"))
+    # Acepta ?dimension=Gender o ?by=gender
+    key = (by or dimension or "gender").strip().lower()
+    if key not in _ALLOWED_BY:
+        raise HTTPException(status_code=400, detail="dimension inválida")
+
+    col = getattr(Employee, key)
+    q = db.query(col.label("label"), func.count(Employee.id).label("count"))
+
     q = apply_filters(
         q,
         city,
@@ -59,10 +66,17 @@ def distribution(
         ever_benched,
         leave_or_not,
     )
-    data = [{"key": k, "count": c} for k, c in q.group_by(col).all()]
-    return {"by": by, "data": data}
 
+    rows = q.group_by(col).order_by(col).all()
+    total = sum(int(c) for _, c in rows)
 
+    return {
+        "dimension": key,
+        "total": total,
+        "items": [{"label": str(lbl), "count": int(cnt)} for lbl, cnt in rows],
+    }
+
+# ---------- EXPORT ----------
 @router.get("/export")
 def export_csv(
     city: str | None = None,
@@ -116,7 +130,7 @@ def export_csv(
         headers={"Content-Disposition": 'attachment; filename="employees_export.csv"'},
     )
 
-
+# ---------- LEAVE PROBABILITY ----------
 @router.get("/leave_probability")
 def leave_probability(
     city: str | None = None,
@@ -165,7 +179,7 @@ def leave_probability(
     prob = avg_q.scalar() or 0.0
     return {"count": count, "leave_prob": round(float(prob), 3)}
 
-
+# ---------- CORRELATION ----------
 @router.get("/correlation")
 def correlation(
     db: DbSess,
@@ -180,10 +194,8 @@ def correlation(
     leave_or_not: int | None = None,
 ):
     q = db.query(Employee.years_experience.label("x"), Employee.payment_tier.label("y"))
-    try:
-        from app.routers.employees import apply_filters
-        q = apply_filters(q, city, gender, age_min, age_max, education, payment_tier, joining_year, ever_benched, leave_or_not)
-    except Exception:
-        pass
+    q = apply_filters(
+        q, city, gender, age_min, age_max, education, payment_tier, joining_year, ever_benched, leave_or_not
+    )
     rows = q.limit(5000).all()
     return [{"x": int(x or 0), "y": int(y or 0)} for x, y in rows]

@@ -26,31 +26,53 @@ export default function FiltersBar({ onChange }: { onChange: (f: Filters) => voi
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
       <Box sx={{ flex: 1, minWidth: 180 }}>
-        <TextField fullWidth label="City" onChange={(e) => set('city', e.target.value)} />
+        <TextField
+          fullWidth
+          label="City"
+          value={f.city ?? ''}
+          onChange={(e) => set('city', e.target.value)}
+        />
       </Box>
+
       <Box sx={{ width: { xs: '100%', md: 200 } }}>
-        <TextField select fullWidth label="Gender" onChange={(e) => set('gender', e.target.value)}>
+        <TextField
+          select
+          fullWidth
+          label="Gender"
+          value={f.gender ?? ''}               // 👈 controlado
+          onChange={(e) => set('gender', e.target.value)}
+        >
           <MenuItem value="">(Todos)</MenuItem>
           <MenuItem value="Male">Male</MenuItem>
           <MenuItem value="Female">Female</MenuItem>
         </TextField>
       </Box>
+
       <Box sx={{ flex: 1, minWidth: 200 }}>
-        <TextField fullWidth label="Education" onChange={(e) => set('education', e.target.value)} />
+        <TextField
+          fullWidth
+          label="Education"
+          value={f.education ?? ''}
+          onChange={(e) => set('education', e.target.value)}
+        />
       </Box>
+
       <Box sx={{ width: { xs: '100%', md: 140 } }}>
         <TextField
           fullWidth
           label="Age Min"
           type="number"
+          value={f.age_min ?? ''}              // 👈 controlado
           onChange={(e) => set('age_min', e.target.value)}
         />
       </Box>
+
       <Box sx={{ width: { xs: '100%', md: 140 } }}>
         <TextField
           fullWidth
           label="Age Max"
           type="number"
+          value={f.age_max ?? ''}              // 👈 controlado
           onChange={(e) => set('age_max', e.target.value)}
         />
       </Box>

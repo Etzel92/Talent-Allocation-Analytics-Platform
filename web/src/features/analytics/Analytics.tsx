@@ -17,19 +17,21 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 
 type Item = { name: string; value: number };
 
-// 🔧 normaliza distintos esquemas (name/value, key/count, label/total, etc.)
 const normalizeItem = (r: any): Item => ({
-  name: r.name ?? r.key ?? r.label ?? r.dimension ?? String(r?.dimension_value ?? ''),
-  value: r.value ?? r.count ?? r.total ?? Number(r?.qty ?? 0),
+  name: r.name ?? r.key ?? r.label ?? String(r?.dimension_value ?? ''),
+  value: Number(r.value ?? r.count ?? r.total ?? r.qty ?? 0),
 });
 
 export default function Analytics() {
   const [dim, setDim] = useState<'Gender' | 'Education'>('Gender');
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['distribution', dim],
     queryFn: async () => {
-      const res = await api.get('/reports/distribution', { params: { dimension: dim } });
-      return (res.data ?? []).map(normalizeItem) as Item[];
+      const res = await api.get('/reports/distribution', { params: { dimension: dim.toLowerCase() } });
+      const raw = res.data;
+      const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : [];
+      return arr.map(normalizeItem) as Item[];
     },
   });
 
@@ -68,12 +70,7 @@ export default function Analytics() {
         </Alert>
       )}
 
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={2}
-        sx={{ mb: 2 }}
-        alignItems="stretch"
-      >
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems="stretch">
         <Box sx={{ width: { xs: '100%', md: '25%' } }}>
           <Paper sx={{ p: 2, height: '100%' }}>
             <Typography variant="body2" color="text.secondary">
@@ -99,9 +96,7 @@ export default function Analytics() {
               </ResponsiveContainer>
             ) : (
               <Stack sx={{ height: 320 }} alignItems="center" justifyContent="center">
-                <Typography color="text.secondary">
-                  Sin datos para la dimensión seleccionada
-                </Typography>
+                <Typography color="text.secondary">Sin datos para la dimensión seleccionada</Typography>
               </Stack>
             )}
           </Paper>
