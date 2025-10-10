@@ -6,9 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Employee
 from app.db.session import get_db
+from app.core.deps import get_current_user, require_roles
+from app.db.models import RoleEnum
 from app.schemas import EmployeeOut
 
-router = APIRouter(prefix="/employees", tags=["employees"])
+from fastapi import Depends
+router = APIRouter(prefix="/employees", tags=["employees"], dependencies=[Depends(get_current_user)])
 
 # Alias tipado para la sesión con Depends (evita B008)
 DbSess = Annotated[Session, Depends(get_db)]
@@ -88,3 +91,35 @@ def list_employees(
     response.headers["X-Total-Count"] = str(total)
 
     return items
+
+
+from pydantic import BaseModel
+
+class EmployeeCreate(BaseModel):
+    education: str
+    joining_year: int
+    city: str
+    payment_tier: int
+    age: int
+    gender: str
+    ever_benched: str
+    years_experience: int
+    leave_or_not: int
+
+@router.post("", dependencies=[Depends(require_roles(RoleEnum.HR, RoleEnum.MANAGER))])
+def create_employee(payload: EmployeeCreate, db: DbSess):
+    obj = Employee(
+        education=payload.education,
+        joining_year=payload.joining_year,
+        city=payload.city,
+        payment_tier=payload.payment_tier,
+        age=payload.age,
+        gender=payload.gender,
+        ever_benched=payload.ever_benched,
+        years_experience=payload.years_experience,
+        leave_or_not=payload.leave_or_not,
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj

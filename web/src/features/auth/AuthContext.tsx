@@ -1,52 +1,48 @@
-import { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveSession, clearSession, getRole as getRoleLS, isAuthed as isAuthedLS } from './session';
 import { setUnauthorizedHandler } from '../../shared/lib/axios';
 
-type AuthState = { token: string | null; role: string | null };
-type Ctx = AuthState & { login: (t: string, r: string) => void; logout: () => void };
+type AuthContextType = {
+  role: string | null;
+  isAuthed: boolean;
+  login: (token: string, role: string) => void;
+  logout: () => void;
+};
 
-const AuthContext = createContext<Ctx | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [role, setRole] = useState<string | null>(localStorage.getItem('role'));
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const [role, setRole] = useState<string | null>(getRoleLS());
+  const [isAuthed, setIsAuthed] = useState<boolean>(isAuthedLS());
+
+  const login = (token: string, role: string) => {
+    saveSession(token, role);
+    setRole(role);
+    setIsAuthed(true);
+    navigate('/employees', { replace: true });
+  };
 
   const logout = () => {
-    setToken(null);
+    clearSession();
     setRole(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    navigate('/login');
+    setIsAuthed(false);
+    navigate('/login', { replace: true });
   };
 
   useEffect(() => {
-    // si el backend responde 401, cerramos sesión automáticamente
+    // si la API responde 401, cerramos sesión
     setUnauthorizedHandler(() => logout);
-  }, []);
+  }, []); // eslint-disable-line
 
-  const value = useMemo<Ctx>(
-    () => ({
-      token,
-      role,
-      login: (t, r) => {
-        setToken(t);
-        setRole(r);
-        localStorage.setItem('token', t);
-        localStorage.setItem('role', r);
-        navigate('/employees');
-      },
-      logout,
-    }),
-    [token, role, navigate],
-  );
+  const value = useMemo(() => ({ role, isAuthed, login, logout }), [role, isAuthed]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('AuthContext missing');
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
   return ctx;
 }

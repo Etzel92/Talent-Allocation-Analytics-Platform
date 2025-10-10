@@ -22,6 +22,7 @@ export default function Login() {
 
   const onSubmit = async (data: FormData) => {
     const res = await api.post('/auth/login', data);
+    // tu backend devuelve { access_token, role }
     login(res.data.access_token, res.data.role);
   };
 

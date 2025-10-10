@@ -7,6 +7,10 @@ export type Filters = {
   education?: string;
   age_min?: string;
   age_max?: string;
+  payment_tier?: string;
+  joining_year?: string;
+  ever_benched?: string;
+  leave_or_not?: string;
 };
 
 export default function FiltersBar({ onChange }: { onChange: (f: Filters) => void }) {

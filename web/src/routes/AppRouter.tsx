@@ -1,18 +1,29 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../features/auth/Login';
+import ProtectedRoute from './ProtectedRoute';
+import GuestRoute from './GuestRoute';
+
+import AppLayout from '../components/AppLayout'; // o '../layout/AppLayout' si lo moviste
 import Employees from '../features/employees/Employees';
 import Analytics from '../features/analytics/Analytics';
-import ProtectedRoute from './guards/ProtectedRoute';
-import AppLayout from '../components/AppLayout';
-// Si usas control por roles:
-// import RoleGuard from "./guards/RoleGuard";
+import Login from '../features/auth/Login';
 
 export default function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
+      {/* default → /employees */}
+      <Route path="/" element={<Navigate to="/employees" replace />} />
 
+      {/* login solo si NO hay sesión */}
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+
+      {/* app protegida */}
       <Route
         path="/employees"
         element={
@@ -28,11 +39,6 @@ export default function AppRouter() {
         path="/analytics"
         element={
           <ProtectedRoute>
-            {/* ejemplo si quieres filtrar por rol:
-            <RoleGuard allow={["MANAGER","ANALYST"]}>
-              <AppLayout><Analytics /></AppLayout>
-            </RoleGuard>
-            */}
             <AppLayout>
               <Analytics />
             </AppLayout>
@@ -40,7 +46,8 @@ export default function AppRouter() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* desconocidas → /employees */}
+      <Route path="*" element={<Navigate to="/employees" replace />} />
     </Routes>
   );
 }

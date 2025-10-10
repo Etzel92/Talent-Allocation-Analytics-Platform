@@ -45,8 +45,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Typography
             variant="h6"
             sx={{ fontWeight: 800, cursor: 'pointer' }}
-            onClick={() => navigate('/')}
-            aria-label="Ir a inicio"
+            onClick={() => navigate('/employees')}
+            aria-label="Ir a Employees"
           >
             KPMG HR Insights
           </Typography>
@@ -89,7 +89,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <Divider sx={{ mt: 'auto' }} />
       </Drawer>
 
-      {/* 👉 empujamos el main para no quedar bajo el drawer */}
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: `${drawerWidth}px` }}>
         <Toolbar />
         {children}
