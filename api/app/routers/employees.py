@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import Employee
@@ -34,7 +35,8 @@ def apply_filters(
     if age_max is not None:
         q = q.filter(Employee.age <= age_max)
     if education:
-        q = q.filter(Employee.education == education)
+        # antes: igualdad estricta; mejor coincidencia flexible
+        q = q.filter(Employee.education.ilike(f"%{education}%"))
     if payment_tier is not None:
         q = q.filter(Employee.payment_tier == payment_tier)
     if joining_year is not None:
@@ -48,6 +50,7 @@ def apply_filters(
 
 @router.get("", response_model=list[EmployeeOut])
 def list_employees(
+    response: Response,
     city: str | None = None,
     gender: str | None = None,
     age_min: int | None = None,
@@ -57,7 +60,9 @@ def list_employees(
     joining_year: int | None = None,
     ever_benched: str | None = None,
     leave_or_not: int | None = None,
-    db: DbSess = None,  # <- antes: Session = Depends(get_db)
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100000, ge=1, le=100000),  # ← adiós 1000 fijo, ahora configurable
+    db: DbSess = None,
 ):
     q = db.query(Employee)
     q = apply_filters(
@@ -72,4 +77,14 @@ def list_employees(
         ever_benched,
         leave_or_not,
     )
-    return q.limit(1000).all()
+
+    # total con filtros aplicados (sin límite)
+    total = q.with_entities(func.count()).scalar()
+
+    # pagina resultados
+    items = q.order_by(Employee.joining_year.desc()).offset(offset).limit(limit).all()
+
+    # expón el total para el front (nuestro front ya lo lee si está)
+    response.headers["X-Total-Count"] = str(total)
+
+    return items

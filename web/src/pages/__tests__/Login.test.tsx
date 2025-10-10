@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import Login from '../Login';
+import Login from '../../features/auth/Login';
 import { MemoryRouter } from 'react-router-dom';
 
 test('muestra título Iniciar sesión', () => {
