@@ -14,9 +14,9 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,   # ok si usas Authorization o cookies
+    allow_credentials=True,  
     allow_methods=["*"],
-    allow_headers=["*"],      # incluye Authorization
+    allow_headers=["*"],      
 )
 
 @app.get("/health")

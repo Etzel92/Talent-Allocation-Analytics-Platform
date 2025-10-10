@@ -62,7 +62,6 @@ export default function NewEmployeeDialog({ open, onClose, onCreated }: Props) {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Nuevo empleado</DialogTitle>
       <DialogContent dividers>
-        {/* Layout responsive sin Grid: 1 col (xs) / 2 cols (sm+) */}
         <Box
           sx={{
             display: 'grid',
@@ -118,7 +117,6 @@ export default function NewEmployeeDialog({ open, onClose, onCreated }: Props) {
             {['Yes','No'].map(b => <MenuItem key={b} value={b}>{b}</MenuItem>)}
           </TextField>
 
-          {/* ocupa todo el ancho */}
           <Box sx={{ gridColumn: '1 / -1' }}>
             <FormControlLabel
               control={

@@ -99,13 +99,11 @@ def export_csv(
         w.writeheader()
         yield buf.getvalue(); buf.seek(0); buf.truncate(0)
 
-        # stream por chunks ~64KB
         for i, e in enumerate(q.yield_per(1000), 1):
             w.writerow({k: getattr(e, k) for k in cols})
             if buf.tell() > 64 * 1024:
                 yield buf.getvalue()
                 buf.seek(0); buf.truncate(0)
-        # flush final
         rem = buf.getvalue()
         if rem:
             yield rem
@@ -177,7 +175,7 @@ def correlation(
 # ---------- EXPORTS TEMÁTICOS ----------
 @router.get("/export_preset")
 def export_preset(
-    kind: str,  # "diversity" | "attrition" | "talent"
+    kind: str, 
     city: str | None = None,
     gender: str | None = None,
     age_min: int | None = None,

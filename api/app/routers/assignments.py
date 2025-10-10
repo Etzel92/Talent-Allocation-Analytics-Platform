@@ -30,7 +30,6 @@ def search(
 
     skill_names = [s.strip() for s in skills.split(",")] if skills else []
     if skill_names:
-        # ANY / OR por defecto
         sub = (
             db.query(EmployeeSkill.employee_id)
               .join(Skill, Skill.id == EmployeeSkill.skill_id)

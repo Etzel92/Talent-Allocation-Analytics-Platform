@@ -1,6 +1,6 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes } from '@mui/material/styles';
 
-const theme = createTheme({
+let theme = createTheme({
   shape: { borderRadius: 12 },
   palette: {
     mode: 'light',
@@ -22,10 +22,31 @@ const theme = createTheme({
     button: { textTransform: 'none', fontWeight: 600 },
   },
   components: {
-    MuiContainer: { defaultProps: { maxWidth: 'lg' } },
+    MuiContainer: {
+      defaultProps: { maxWidth: 'lg' },
+    },
     MuiPaper: {
-      styleOverrides: { root: { borderRadius: 16, boxShadow: '0 6px 20px rgba(2, 6, 23, 0.06)' } },
+      styleOverrides: {
+        root: {
+          borderRadius: 16,
+          boxShadow: '0 6px 20px rgba(2, 6, 23, 0.06)',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: { borderRadius: 18 },
+      },
+    },
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+    },
+    MuiChip: {
+      styleOverrides: { root: { borderRadius: 8 } },
     },
   },
 });
+
+theme = responsiveFontSizes(theme, { factor: 2.2 });
+
 export default theme;

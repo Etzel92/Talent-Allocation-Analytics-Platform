@@ -1,37 +1,66 @@
 import type { ReactNode } from 'react';
 import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  IconButton,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Avatar,
+  AppBar, Box, Toolbar, Typography, IconButton, Drawer, List,
+  ListItemButton, ListItemIcon, ListItemText, Divider, Avatar,
+  useMediaQuery
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { BarChart2, Users, LogOut, Briefcase } from 'lucide-react';
+import { BarChart2, Users, LogOut, Briefcase, Menu as MenuIcon } from 'lucide-react';
 import { useAuth } from '../features/auth/AuthContext';
+import * as React from 'react';
 
 const drawerWidth = 240;
+
+type Item = { label: string; icon: React.ReactNode; to: string };
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { logout, role } = useAuth();
 
-  const items = [
-    { label: 'Employees', icon: <Users size={20} />, to: '/employees' },
-    { label: 'Analytics', icon: <BarChart2 size={20} />, to: '/analytics' },
-    { label: 'Assignments', icon: <Briefcase size={20} />, to: '/assignments' }, // 👈 nuevo
+  const isMdUp = useMediaQuery((t: Theme) => t.breakpoints.up('md'));
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const items: Item[] = [
+    { label: 'Employees',   icon: <Users size={20} />,     to: '/employees' },
+    { label: 'Analytics',   icon: <BarChart2 size={20} />, to: '/analytics' },
+    { label: 'Assignments', icon: <Briefcase size={20} />, to: '/assignments' },
   ];
 
+  const DrawerContent = (
+    <React.Fragment>
+      <Toolbar />
+      <List sx={{ mt: 1 }}>
+        {items.map((it) => {
+          const selected = pathname.startsWith(it.to);
+          return (
+            <ListItemButton
+              key={it.to}
+              selected={selected}
+              onClick={() => {
+                navigate(it.to);
+                setMobileOpen(false); // cerrar en móvil
+              }}
+              sx={{
+                borderRadius: 1,
+                mx: 1,
+                '&.Mui-selected': { bgcolor: 'action.selected' },
+              }}
+              aria-current={selected ? 'page' : undefined}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>{it.icon}</ListItemIcon>
+              <ListItemText primary={it.label} />
+            </ListItemButton>
+          );
+        })}
+      </List>
+      <Divider sx={{ mt: 'auto' }} />
+    </React.Fragment>
+  );
+
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
       <AppBar
         position="fixed"
         elevation={0}
@@ -43,6 +72,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         }}
       >
         <Toolbar>
+          {!isMdUp && (
+            <IconButton
+              edge="start"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Abrir menú"
+              sx={{ mr: 1 }}
+            >
+              <MenuIcon size={20} />
+            </IconButton>
+          )}
           <Typography
             variant="h6"
             sx={{ fontWeight: 800, cursor: 'pointer' }}
@@ -52,7 +91,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             KPMG HR Insights
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ mr: 2, color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ mr: 2, color: 'text.secondary', display: { xs: 'none', sm: 'inline' } }}>
             {role}
           </Typography>
           <Avatar sx={{ width: 32, height: 32, mr: 1 }}>{(role ?? 'H')[0]}</Avatar>
@@ -62,35 +101,50 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </Toolbar>
       </AppBar>
 
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          [`& .MuiDrawer-paper`]: {
+      {/* Drawer temporal (móvil) */}
+      {!isMdUp && (
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid #E2E8F0' },
+          }}
+        >
+          {DrawerContent}
+        </Drawer>
+      )}
+
+      {/* Drawer permanente (md+) */}
+      {isMdUp && (
+        <Drawer
+          variant="permanent"
+          sx={{
             width: drawerWidth,
-            boxSizing: 'border-box',
-            borderRight: '1px solid #E2E8F0',
-          },
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': {
+              width: drawerWidth,
+              boxSizing: 'border-box',
+              borderRight: '1px solid #E2E8F0',
+            },
+          }}
+          open
+        >
+          {DrawerContent}
+        </Drawer>
+      )}
+
+      {/* Contenido */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: { xs: 2, md: 3 },
+          ml: { xs: 0, md: `${drawerWidth}px` },
         }}
       >
-        <Toolbar />
-        <List sx={{ mt: 1 }}>
-          {items.map((it) => (
-            <ListItemButton
-              key={it.to}
-              selected={pathname.startsWith(it.to)}
-              onClick={() => navigate(it.to)}
-              sx={{ borderRadius: 1, mx: 1 }}
-            >
-              <ListItemIcon>{it.icon}</ListItemIcon>
-              <ListItemText primary={it.label} />
-            </ListItemButton>
-          ))}
-        </List>
-        <Divider sx={{ mt: 'auto' }} />
-      </Drawer>
-
-      <Box component="main" sx={{ flexGrow: 1, p: 3, ml: `${drawerWidth}px` }}>
         <Toolbar />
         {children}
       </Box>

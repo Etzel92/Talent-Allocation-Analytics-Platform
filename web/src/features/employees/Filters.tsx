@@ -15,11 +15,12 @@ export type Filters = {
 
 export default function FiltersBar({ onChange }: { onChange: (f: Filters) => void }) {
   const [f, setF] = useState<Filters>({});
-  const set = (k: keyof Filters, v: string) => setF((prev) => ({ ...prev, [k]: v || undefined }));
+  const set = (k: keyof Filters, v: string) =>
+    setF((prev) => ({ ...prev, [k]: v || undefined }));
 
   const debounced = useMemo(() => f, [f]);
   useEffect(() => {
-    const t = setTimeout(() => onChange(debounced), 300);
+    const t = setTimeout(() => onChange(debounced), 250);
     return () => clearTimeout(t);
   }, [debounced, onChange]);
 
@@ -39,7 +40,7 @@ export default function FiltersBar({ onChange }: { onChange: (f: Filters) => voi
           select
           fullWidth
           label="Gender"
-          value={f.gender ?? ''}               // 👈 controlado
+          value={f.gender ?? ''}
           onChange={(e) => set('gender', e.target.value)}
         >
           <MenuItem value="">(Todos)</MenuItem>
@@ -62,7 +63,7 @@ export default function FiltersBar({ onChange }: { onChange: (f: Filters) => voi
           fullWidth
           label="Age Min"
           type="number"
-          value={f.age_min ?? ''}              // 👈 controlado
+          value={f.age_min ?? ''}
           onChange={(e) => set('age_min', e.target.value)}
         />
       </Box>
@@ -72,7 +73,7 @@ export default function FiltersBar({ onChange }: { onChange: (f: Filters) => voi
           fullWidth
           label="Age Max"
           type="number"
-          value={f.age_max ?? ''}              // 👈 controlado
+          value={f.age_max ?? ''}
           onChange={(e) => set('age_max', e.target.value)}
         />
       </Box>

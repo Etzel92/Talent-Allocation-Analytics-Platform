@@ -37,7 +37,6 @@ def get_current_user(token: TokenStr, db: DbSess) -> User:
 
 
 def require_roles(*roles: RoleEnum):
-    """Dependencia para proteger rutas por rol."""
 
     def checker(user: Annotated[User, Depends(get_current_user)]):
         if user.role not in roles:

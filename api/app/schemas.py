@@ -23,7 +23,6 @@ class EmployeeOut(ORMModel):
     age: int
     gender: str
     ever_benched: str
-    # 👇 lo que expone el API (no years_experience)
     experience_in_current_domain: int
     leave_or_not: int
 
@@ -36,8 +35,8 @@ class Filters(ORMModel):
     education: Optional[str] = None
     payment_tier: Optional[int] = None
     joining_year: Optional[int] = None
-    ever_benched: Optional[str] = None  # "Yes"/"No"
-    leave_or_not: Optional[int] = None  # 0/1
+    ever_benched: Optional[str] = None 
+    leave_or_not: Optional[int] = None 
 
 
 class Token(ORMModel):
