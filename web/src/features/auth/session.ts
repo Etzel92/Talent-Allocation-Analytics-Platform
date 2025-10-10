@@ -2,12 +2,17 @@ export const TOKEN_KEY = 'token';
 export const ROLE_KEY  = 'role';
 
 let logoutTimer: number | undefined;
+let onExpire: (() => void) | null = null;  // ⬅️ callback
+
+export function setOnSessionExpire(fn: () => void) {  // ⬅️ registrar callback
+  onExpire = fn;
+}
 
 // --- helpers de storage ---
 export function saveSession(token: string, role: string) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(ROLE_KEY, role);
-  scheduleAutoLogout(token);        // ⬅️ programa auto-logout
+  scheduleAutoLogout(token);        // programa auto-logout
 }
 
 export function clearSession() {
@@ -26,7 +31,6 @@ export function getToken() {
 
 // --- JWT exp ---
 function decodeBase64Url(s: string) {
-  // JWT usa base64url ( - _ ), lo convertimos a base64 clásico
   s = s.replace(/-/g, '+').replace(/_/g, '/');
   const pad = s.length % 4;
   if (pad) s += '='.repeat(4 - pad);
@@ -51,7 +55,7 @@ export function isAuthed(): boolean {
   return !!exp && exp > Date.now();
 }
 
-// Programa el auto-logout (2s antes del exp)
+// Programa el auto-logout (2s antes del exp) y llama onExpire()
 export function scheduleAutoLogout(token?: string) {
   if (logoutTimer) { clearTimeout(logoutTimer); logoutTimer = undefined; }
   const t = token || getToken();
@@ -62,13 +66,13 @@ export function scheduleAutoLogout(token?: string) {
 
   const msLeft = expMs - Date.now();
   if (msLeft <= 0) {
-    // ya expiró
     clearSession();
+    onExpire?.();    
     return;
   }
   logoutTimer = window.setTimeout(() => {
     clearSession();
-    // no navegamos aquí; lo hará el AuthContext al detectar 401 ó estado no-authed
+    onExpire?.();    
   }, Math.max(0, msLeft - 2000));
 }
 
