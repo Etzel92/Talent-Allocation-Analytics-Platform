@@ -1,19 +1,18 @@
-# api/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Si tus archivos están en api/app/*.py:
-from app.analytics import router as an_router
-from app.auth import router as auth_router
-from app.employee import router as emp_router
-from app.export import router as ex_router
+# Si ejecutas como `uvicorn app.main:app`, usa imports absolutos:
+from app.routers import auth, employees, reports
 
-app = FastAPI(title="Talent MVP API")
+app = FastAPI(title="Talent Analytics API")
 
-# CORS primero (antes de incluir routers)
+# Orígenes permitidos (Vite por defecto en 5173)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -25,8 +24,7 @@ def health():
     return {"status": "ok"}
 
 
-# Luego todos los routers
-app.include_router(auth_router)
-app.include_router(emp_router)
-app.include_router(an_router)
-app.include_router(ex_router)
+# Routers
+app.include_router(auth.router)
+app.include_router(employees.router)
+app.include_router(reports.router)

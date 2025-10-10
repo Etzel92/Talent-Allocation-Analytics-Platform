@@ -41,3 +41,7 @@ npm run dev
 ```powershell
 # desde la raíz
 .\scripts\setup.ps1
+
+
+.\scripts\run_api.ps1
+.\scripts\run_web.ps1
