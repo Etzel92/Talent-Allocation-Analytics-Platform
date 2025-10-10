@@ -1,107 +1,246 @@
-import { useState, useMemo } from 'react';
+import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import api from '../../shared/lib/axios';
 import {
-  Container,
-  Typography,
-  ToggleButtonGroup,
-  ToggleButton,
-  Paper,
-  Skeleton,
-  Stack,
   Box,
   Button,
+  Card,
+  CardContent,
+  Chip,
+  Stack,
+  Typography,
   Alert,
+  Skeleton,
 } from '@mui/material';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ScatterChart,
+  Scatter,
+} from 'recharts';
+import { getDistribution, getCorrelation, getLeaveProbability, exportCsv } from '../../api/reports';
 
-type Item = { name: string; value: number };
+type DistItem = { key: string; count: number };
+type CorrPoint = { x: number; y: number };
 
-const normalizeItem = (r: any): Item => ({
-  name: r.name ?? r.key ?? r.label ?? String(r?.dimension_value ?? ''),
-  value: Number(r.value ?? r.count ?? r.total ?? r.qty ?? 0),
-});
+const DIMENSIONS = [
+  { key: 'gender', label: 'Gender' },
+  { key: 'age', label: 'Age' },
+  { key: 'city', label: 'City' },
+  { key: 'education', label: 'Education' },
+] as const;
 
 export default function Analytics() {
-  const [dim, setDim] = useState<'Gender' | 'Education'>('Gender');
+  const [dim, setDim] = React.useState<(typeof DIMENSIONS)[number]['key']>('gender');
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['distribution', dim],
-    queryFn: async () => {
-      const res = await api.get('/reports/distribution', { params: { dimension: dim.toLowerCase() } });
-      const raw = res.data;
-      const arr = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : [];
-      return arr.map(normalizeItem) as Item[];
-    },
+  // Distribución (según dimensión seleccionada)
+  const dist = useQuery<DistItem[]>({
+    queryKey: ['dist', dim],
+    queryFn: () => getDistribution(dim),
   });
 
-  const total = useMemo(() => (data ?? []).reduce((a, b) => a + b.value, 0), [data]);
+  // KPIs y gráficos adicionales
+  const corr = useQuery<CorrPoint[]>({
+    queryKey: ['corr'],
+    queryFn: () => getCorrelation(),
+  });
 
-  const handleExport = () => {
-    const a = document.createElement('a');
-    a.href = `${import.meta.env.VITE_API_URL}/reports/export`;
-    a.download = 'employees_export.csv';
-    a.click();
-  };
+  const leaveProb = useQuery<{ probability: number }>({
+    queryKey: ['leaveProb'],
+    queryFn: () => getLeaveProbability(),
+  });
+
+  const leaveDist = useQuery<DistItem[]>({
+    queryKey: ['leaveDist'],
+    queryFn: () => getDistribution('leave_or_not'),
+  });
+
+  const benched = useQuery<DistItem[]>({
+    queryKey: ['benched'],
+    queryFn: () => getDistribution('ever_benched'),
+  });
+
+  const total = React.useMemo(
+    () => (dist.data ?? []).reduce((s, d) => s + d.count, 0),
+    [dist.data],
+  );
+
+  const benchedYes = React.useMemo(() => {
+    const list = benched.data ?? [];
+    const yes = list.find((d) => (d.key ?? '').toString().toLowerCase() === 'yes');
+    return yes?.count ?? 0;
+  }, [benched.data]);
 
   return (
-    <Container>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+    <Box>
+      {/* Encabezado */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
         <Typography variant="h5">Analytics</Typography>
-        <Button variant="outlined" onClick={handleExport} aria-label="Exportar CSV">
+        <Button variant="outlined" onClick={() => exportCsv({})}>
           Exportar CSV
         </Button>
       </Stack>
 
-      <ToggleButtonGroup
-        color="primary"
-        value={dim}
-        exclusive
-        onChange={(_, v) => v && setDim(v)}
-        sx={{ mb: 3 }}
-      >
-        <ToggleButton value="Gender">Gender</ToggleButton>
-        <ToggleButton value="Education">Education</ToggleButton>
-      </ToggleButtonGroup>
-
-      {isError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          No se pudo cargar la distribución.
-        </Alert>
-      )}
-
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }} alignItems="stretch">
-        <Box sx={{ width: { xs: '100%', md: '25%' } }}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="body2" color="text.secondary">
-              Total
-            </Typography>
-            <Typography variant="h5">{total}</Typography>
-          </Paper>
-        </Box>
-
-        <Box sx={{ width: { xs: '100%', md: '75%' } }}>
-          <Paper sx={{ p: 2, height: 360 }}>
-            {isLoading ? (
-              <Skeleton variant="rounded" height={320} />
-            ) : data && data.length > 0 ? (
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={data}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="value" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <Stack sx={{ height: 320 }} alignItems="center" justifyContent="center">
-                <Typography color="text.secondary">Sin datos para la dimensión seleccionada</Typography>
-              </Stack>
-            )}
-          </Paper>
-        </Box>
+      {/* Selector de dimensión */}
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+        {DIMENSIONS.map((d) => (
+          <Chip
+            key={d.key}
+            label={d.label}
+            color={dim === d.key ? 'primary' : 'default'}
+            variant={dim === d.key ? 'filled' : 'outlined'}
+            onClick={() => setDim(d.key)}
+          />
+        ))}
       </Stack>
-    </Container>
+
+      {/* Distribución + total */}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+        <Card sx={{ flex: '0 0 240px' }}>
+          <CardContent>
+            <Typography variant="subtitle2">Total</Typography>
+            <Typography variant="h4" sx={{ mt: 1 }}>
+              {dist.isLoading ? '…' : total}
+            </Typography>
+            {dist.isError && (
+              <Alert severity="error" sx={{ mt: 1 }}>
+                No se pudo cargar la distribución.
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Distribución por {DIMENSIONS.find((x) => x.key === dim)?.label}
+            </Typography>
+            <Box sx={{ height: 280 }}>
+              {dist.isLoading ? (
+                <Skeleton variant="rounded" height={280} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dist.data ?? []}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="key" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Stack>
+
+      {/* KPIs: Benched y Leave */}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Typography variant="subtitle2">Benched (Yes)</Typography>
+            <Typography variant="h4" sx={{ mt: 1 }}>
+              {benched.isLoading ? '…' : benchedYes}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Typography variant="subtitle2">Leave probability</Typography>
+            <Typography variant="h4" sx={{ mt: 1 }}>
+              {leaveProb.isLoading
+                ? '…'
+                : `${((leaveProb.data?.probability ?? 0) * 100).toFixed(1)}%`}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ flex: 1 }}>
+          <CardContent>
+            <Typography variant="subtitle2">Leave vs Stay</Typography>
+            <Box sx={{ height: 160, mt: 1 }}>
+              {leaveDist.isLoading ? (
+                <Skeleton variant="rounded" height={140} />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={(leaveDist.data ?? []).map((d) => ({
+                      label: d.key === '1' ? 'Leave' : 'Stay',
+                      count: d.count,
+                    }))}
+                  >
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="label" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Stack>
+
+      {/* Correlación experiencia vs tier */}
+      <Card>
+  <CardContent>
+    <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
+      Correlación: Experiencia (x) vs Payment Tier (y)
+    </Typography>
+    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+      Puntos: {corr.data?.length ?? 0}
+    </Typography>
+
+    <Box sx={{ height: 300, mt: 1 }}>
+      {corr.isLoading ? (
+        <Skeleton variant="rounded" height={300} />
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart>
+            <CartesianGrid />
+            <XAxis
+              type="number"
+              dataKey="x"
+              name="Experience (yrs)"
+              domain={[
+                0,
+                Math.max(1, Math.ceil(Math.max(...(corr.data ?? []).map(p => p.x || 0))))
+              ]}
+              allowDecimals={false}
+              tickCount={(Math.max(...(corr.data ?? []).map(p => p.x || 0)) || 1) + 1}
+            />
+            <YAxis
+              type="number"
+              dataKey="y"
+              name="Tier"
+              domain={[1, 3]}
+              ticks={[1, 2, 3]}
+              allowDecimals={false}
+            />
+            <Tooltip
+              formatter={(val: any, name: string) =>
+                name === "y" ? [`${val}`, "Tier"] : [`${val} yrs`, "Experience"]
+              }
+            />
+            <Scatter
+              data={corr.data ?? []}
+              shape="circle"
+              // tamaño y opacidad suaves
+              fillOpacity={0.85}
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      )}
+    </Box>
+  </CardContent>
+</Card>
+
+    </Box>
   );
 }

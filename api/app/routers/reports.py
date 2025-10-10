@@ -28,6 +28,7 @@ _ALLOWED_BY = {
     "joining_year",
     "ever_benched",
     "leave_or_not",
+    "age",  # habilitar Age en /distribution
 }
 
 # ---------- DISTRIBUTION ----------
@@ -44,37 +45,22 @@ def distribution(
     joining_year: int | None = None,
     ever_benched: str | None = None,
     leave_or_not: int | None = None,
-    db: DbSess = None,
+    db: DbSess = None,  # <-- ver nota abajo si prefieres sin default
 ):
-    # Acepta ?dimension=Gender o ?by=gender
+    # Nota: si quieres forzar inyección estricta, cambia a: db: DbSess
     key = (by or dimension or "gender").strip().lower()
     if key not in _ALLOWED_BY:
         raise HTTPException(status_code=400, detail="dimension inválida")
 
     col = getattr(Employee, key)
-    q = db.query(col.label("label"), func.count(Employee.id).label("count"))
-
+    q = db.query(col.label("key"), func.count(Employee.id).label("count"))
     q = apply_filters(
-        q,
-        city,
-        gender,
-        age_min,
-        age_max,
-        education,
-        payment_tier,
-        joining_year,
-        ever_benched,
-        leave_or_not,
+        q, city, gender, age_min, age_max, education, payment_tier,
+        joining_year, ever_benched, leave_or_not
     )
-
     rows = q.group_by(col).order_by(col).all()
-    total = sum(int(c) for _, c in rows)
-
-    return {
-        "dimension": key,
-        "total": total,
-        "items": [{"label": str(lbl), "count": int(cnt)} for lbl, cnt in rows],
-    }
+    # Respuesta plana para consumir directo en Recharts:
+    return [{"key": str(r.key), "count": int(r.count)} for r in rows]
 
 # ---------- EXPORT ----------
 @router.get("/export")
@@ -88,20 +74,12 @@ def export_csv(
     joining_year: int | None = None,
     ever_benched: str | None = None,
     leave_or_not: int | None = None,
-    db: DbSess = None,
+    db: DbSess = None,  # idem nota de inyección
 ):
     q = db.query(Employee)
     q = apply_filters(
-        q,
-        city,
-        gender,
-        age_min,
-        age_max,
-        education,
-        payment_tier,
-        joining_year,
-        ever_benched,
-        leave_or_not,
+        q, city, gender, age_min, age_max, education, payment_tier,
+        joining_year, ever_benched, leave_or_not
     )
     cols = [
         "id",
@@ -112,7 +90,7 @@ def export_csv(
         "age",
         "gender",
         "ever_benched",
-        "years_experience",
+        "experience_in_current_domain",  # <-- FIX: nombre correcto en el modelo
         "leave_or_not",
     ]
 
@@ -142,42 +120,18 @@ def leave_probability(
     joining_year: int | None = None,
     ever_benched: str | None = None,
     leave_or_not: int | None = None,
-    db: DbSess = None,
+    db: DbSess = None,  # idem
 ):
     """
-    Predicción baseline: probabilidad empírica de abandono
-    = promedio de leave_or_not (0/1) en el conjunto filtrado.
+    Baseline: probabilidad empírica de abandono = avg(leave_or_not)
     """
-    base_q = db.query(Employee)
-    base_q = apply_filters(
-        base_q,
-        city,
-        gender,
-        age_min,
-        age_max,
-        education,
-        payment_tier,
-        joining_year,
-        ever_benched,
-        leave_or_not,
-    )
-    count = base_q.count()
-
     avg_q = db.query(func.avg(cast(Employee.leave_or_not, Float)))
     avg_q = apply_filters(
-        avg_q,
-        city,
-        gender,
-        age_min,
-        age_max,
-        education,
-        payment_tier,
-        joining_year,
-        ever_benched,
-        leave_or_not,
+        avg_q, city, gender, age_min, age_max, education, payment_tier,
+        joining_year, ever_benched, leave_or_not
     )
     prob = avg_q.scalar() or 0.0
-    return {"count": count, "leave_prob": round(float(prob), 3)}
+    return {"probability": round(float(prob), 4)}
 
 # ---------- CORRELATION ----------
 @router.get("/correlation")
@@ -193,9 +147,26 @@ def correlation(
     ever_benched: str | None = None,
     leave_or_not: int | None = None,
 ):
-    q = db.query(Employee.years_experience.label("x"), Employee.payment_tier.label("y"))
+    # Detecta la columna de experiencia que realmente existe en tu modelo
+    exp_attr = None
+    for cand in ("experience_in_current_domain", "years_experience", "experience"):
+        if hasattr(Employee, cand):
+            exp_attr = getattr(Employee, cand)
+            break
+    if exp_attr is None:
+        raise HTTPException(status_code=500, detail="No se encontró columna de experiencia")
+
+    # Castea a float para evitar strings/decimales que Recharts no dibuja
+    x_col = cast(exp_attr, Float).label("x")
+    y_col = cast(Employee.payment_tier, Float).label("y")
+
+    q = db.query(x_col, y_col)
     q = apply_filters(
-        q, city, gender, age_min, age_max, education, payment_tier, joining_year, ever_benched, leave_or_not
+        q, city, gender, age_min, age_max, education,
+        payment_tier, joining_year, ever_benched, leave_or_not
     )
-    rows = q.limit(5000).all()
-    return [{"x": int(x or 0), "y": int(y or 0)} for x, y in rows]
+    # Filtra nulos
+    q = q.filter(exp_attr.isnot(None), Employee.payment_tier.isnot(None))
+    rows = q.all()
+
+    return [{"x": float(r.x), "y": float(r.y)} for r in rows]
