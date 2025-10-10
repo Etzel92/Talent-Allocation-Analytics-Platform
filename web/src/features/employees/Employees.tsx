@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../shared/lib/axios';
-import { Container, Typography, Paper, Button, Alert, Skeleton, Stack, Chip } from '@mui/material';
+import {
+  Container, Typography, Paper, Button, Alert, Skeleton, Stack, Chip
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import FiltersBar, { type Filters } from './Filters';
+import NewEmployeeDialog from './NewEmployeeDialog';
 
 type EmployeeUI = {
   Education: string;
@@ -37,6 +41,13 @@ const normalizeEmployee = (r: any): EmployeeUI => ({
 export default function Employees() {
   const [filters, setFilters] = useState<Filters>({});
   const qs = new URLSearchParams(filters as Record<string, string>).toString();
+
+  const queryClient = useQueryClient();
+  const [openNew, setOpenNew] = useState(false);
+
+  // Control por rol (HR / MANAGER pueden crear)
+  const role = (localStorage.getItem('role') || '').toUpperCase();
+  const canCreate = role === 'HR' || role === 'MANAGER';
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['employees', filters],
@@ -88,6 +99,11 @@ export default function Employees() {
     a.click();
   };
 
+  // Se llama después de guardar un nuevo empleado
+  const handleCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
+  };
+
   return (
     <Container>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -95,9 +111,20 @@ export default function Employees() {
           <Typography variant="h5">Employees</Typography>
           <Chip label={`Encontrados: ${total}`} size="small" />
         </Stack>
-        <Button variant="contained" onClick={handleExport}>
-          Exportar CSV
-        </Button>
+        <Stack direction="row" spacing={1}>
+          {canCreate && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenNew(true)}
+            >
+              Nuevo empleado
+            </Button>
+          )}
+          <Button variant="contained" onClick={handleExport}>
+            Exportar CSV
+          </Button>
+        </Stack>
       </Stack>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -126,6 +153,13 @@ export default function Employees() {
           />
         </Paper>
       )}
+
+      {/* Diálogo de alta */}
+      <NewEmployeeDialog
+        open={openNew}
+        onClose={() => setOpenNew(false)}
+        onCreated={handleCreated}
+      />
     </Container>
   );
 }

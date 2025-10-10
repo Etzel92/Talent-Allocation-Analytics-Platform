@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveSession, clearSession, getRole as getRoleLS, isAuthed as isAuthedLS } from './session';
+import {
+  saveSession, clearSession, getRole as getRoleLS, isAuthed as isAuthedLS, restoreSession
+} from './session';
 import { setUnauthorizedHandler } from '../../shared/lib/axios';
 
 type AuthContextType = {
@@ -18,7 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthed, setIsAuthed] = useState<boolean>(isAuthedLS());
 
   const login = (token: string, role: string) => {
-    saveSession(token, role);
+    saveSession(token, role);         // ⬅️ arma timer
     setRole(role);
     setIsAuthed(true);
     navigate('/employees', { replace: true });
@@ -32,7 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // si la API responde 401, cerramos sesión
+    // Restaura timer al recargar
+    restoreSession();
+
+    // Si la API responde 401 → cerramos sesión
     setUnauthorizedHandler(() => logout);
   }, []); // eslint-disable-line
 
