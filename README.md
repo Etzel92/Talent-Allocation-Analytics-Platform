@@ -1,86 +1,87 @@
-﻿# KPMG HR Insights — Talent Analytics (Monorepo)
+# Talent Allocation Analytics Platform
 
-_MVP funcional para análisis de talento y asignación de perfiles._
+A full-stack web application for workforce analytics and talent allocation.
 
-> **Resumen del MVP**: login por roles (HR, Manager, Analyst), listado de empleados con filtros, 1–2 gráficas básicas y exportación CSV. Dataset de ejemplo en `/data`. Credenciales de demo más abajo.
+This project includes role-based authentication, an employee directory with filters, basic analytics dashboards, and CSV export functionality. It is built as a monorepo with a React + TypeScript frontend and a FastAPI backend.
+
+> **MVP summary**: role-based login (HR, Manager, Analyst), employee listing with filters, basic charts, CSV export, and sample data available in `/data`.
 
 ---
 
-## Contenidos
-- [Arquitectura y stack](#arquitectura-y-stack)
-- [Estructura del monorepo](#estructura-del-monorepo)
-- [Requisitos](#requisitos)
-- [Primer arranque (Windows)](#primer-arranque-windows)
+## Contents
+
+- [Architecture and Stack](#architecture-and-stack)
+- [Monorepo Structure](#monorepo-structure)
+- [Requirements](#requirements)
+- [Quick Start (Windows)](#quick-start-windows)
 - [Backend (FastAPI)](#backend-fastapi)
-  - [Variables de entorno](#variables-de-entorno)
-  - [Instalación y arranque](#instalación-y-arranque)
+  - [Installation and Run](#installation-and-run)
   - [Migrations (Alembic)](#migrations-alembic)
-  - [Pruebas, lint y formato (Python)](#pruebas-lint-y-formato-python)
+  - [Testing, Linting, and Formatting (Python)](#testing-linting-and-formatting-python)
 - [Frontend (React + TypeScript + Vite)](#frontend-react--typescript--vite)
-  - [Instalación y arranque](#instalación-y-arranque-1)
-  - [Scripts de NPM (tests, lint, formato)](#scripts-de-npm-tests-lint-formato)
-- [Scripts de PowerShell (raíz \scripts)](#scripts-de-powershell-raíz-scripts)
-- [Datos de ejemplo](#datos-de-ejemplo)
-- [Roles y credenciales demo](#roles-y-credenciales-demo)
-- [Endpoints útiles](#endpoints-útiles)
-- [Checklist rápido](#checklist-rápido)
+  - [Installation and Run](#installation-and-run-1)
+  - [NPM Tooling](#npm-tooling)
+- [Sample Data](#sample-data)
+- [Demo Roles and Credentials](#demo-roles-and-credentials)
+- [Useful Endpoints](#useful-endpoints)
+- [Project Scope](#project-scope)
 
 ---
 
-## Arquitectura y stack
+## Architecture and Stack
 
-- **Frontend**: React 18 + TypeScript + Vite, UI con MUI, gráficos con Recharts, datos con React Query.
-- **Backend**: FastAPI (Python 3.11), SQLAlchemy, Alembic, autenticación JWT, autorización por **roles**.
-- **DB (dev)**: SQLite por simplicidad (puede cambiarse a PostgreSQL en despliegue).
-- **Empaquetado tooling**:
-  - **Frontend**: ESLint + Prettier + Vitest + React Testing Library.
-  - **Backend**: pytest + ruff + black + (opcional) mypy.
-- **Dev UX**: scripts en `./scripts/*.ps1` para instalar y levantar todo rápidamente en Windows.
+- **Frontend**: React 18, TypeScript, Vite, Material UI, Recharts, React Query
+- **Backend**: FastAPI, Python 3.11, SQLAlchemy, Alembic, JWT authentication, role-based authorization
+- **Database (development)**: SQLite for simplicity, with the option to migrate to PostgreSQL later
+- **Frontend tooling**: ESLint, Prettier, Vitest, React Testing Library
+- **Backend tooling**: pytest, Ruff, Black, optional mypy
+- **Developer experience**: PowerShell scripts in `./scripts/*.ps1` to simplify setup and local execution on Windows
 
 ---
 
-## Estructura del monorepo
+## Monorepo Structure
 
-```
-/api       # FastAPI + SQLAlchemy + Alembic (JWT, roles)
-/web       # React + TypeScript + Vite + MUI + React Query + Recharts
-/data      # CSV de apoyo (p. ej., employees.csv)
-/docs      # documentación adicional (diagramas, decisiones, etc.)
-/scripts   # scripts .ps1 para setup/arranque rápido en Windows
+```text
+/api       FastAPI backend with SQLAlchemy, Alembic, JWT auth, and role handling
+/web       React + TypeScript + Vite frontend with MUI, React Query, and Recharts
+/data      Supporting CSV data (for example, employees.csv)
+/docs      Additional documentation, diagrams, and technical notes
+/scripts   PowerShell scripts for setup and quick local startup on Windows
 ```
 
 ---
 
-## Requisitos
+## Requirements
 
-- Windows 10/11 **con PowerShell**
-- **Python 3.11+**
-- **Node.js 18/20+** y **npm 10+**
-- **Git**
+- Windows 10/11 with PowerShell
+- Python 3.11+
+- Node.js 18+ or 20+
+- npm 10+
+- Git
 
 ---
 
-## Primer arranque (Windows)
+## Quick Start (Windows)
 
-Desde la **raíz** del repo:
+From the **root** of the repository:
 
 ```powershell
-# instala dependencias de /api y /web, crea y activa venv
+# install dependencies for /api and /web, create and activate the virtual environment
 .\scripts\setup.ps1
 
-# arranca servicios en terminales separadas
-.\scripts
-un_api.ps1
-.\scripts
-un_web.ps1
+# start services in separate terminals
+.\scripts\run_api.ps1
+.\scripts\run_web.ps1
 
-# o, modo todo-en-uno (si está disponible en tu entorno)
+# optional all-in-one mode
 .\scripts\dev.ps1
 ```
 
 ---
 
-## Backend (FastAPI), instalación y arranque por separado
+## Backend (FastAPI)
+
+### Installation and Run
 
 ```powershell
 cd api
@@ -98,17 +99,17 @@ uvicorn app.main:app --reload --port 8000
 cd api
 .\.venv\Scripts\Activate.ps1
 
-# crear tablas (si hay revisiones)
+# apply migrations
 alembic upgrade head
 
-# crear una nueva migración (cuando cambie el modelo)
-alembic revision -m "feat: add <tabla/campo>"
+# create a new migration when the data model changes
+alembic revision -m "feat: add <table/field>"
 alembic upgrade head
 ```
 
-### Pruebas, lint y formato (Python)
+### Testing, Linting, and Formatting (Python)
 
-Instalar herramientas (si no existen todavía):
+Install the tools if needed:
 
 ```powershell
 cd api
@@ -117,35 +118,43 @@ pip install pytest ruff black pre-commit
 pre-commit install
 ```
 
-Comandos recomendados:
+Recommended commands:
 
 ```powershell
-# pruebas
+# run tests
 pytest -q
 
-# lint (estático) y autoformato
+# lint and format
 ruff check .
-ruff format .   # (o) black .
+ruff format .
+# or
+black .
 
-# hooks locales (antes de hacer commit)
+# run local git hooks before commit
 pre-commit run --all-files
 ```
 
 ---
 
-## Frontend (React + TypeScript + Vite), instalación y arranque por separdo
+## Frontend (React + TypeScript + Vite)
+
+### Installation and Run
 
 ```powershell
 cd web
-npm ci   # o: npm i
-npm run dev  # http://localhost:5173
+npm ci
+npm run dev
 ```
 
-### Scripts de NPM (tests, lint, formato)
+The frontend will usually be available at:
 
-Agrega estos scripts al `package.json` de `/web` si aún no existen:
+```text
+http://localhost:5173
+```
 
-Instalar (si falta):
+### NPM Tooling
+
+If any of these tools are missing, install them with:
 
 ```powershell
 cd web
@@ -156,30 +165,47 @@ npm i -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/user
 
 ---
 
-## Datos de ejemplo
+## Sample Data
 
-- Archivo: `/data/employees.csv` (dataset sintético para pruebas).
+- File: `/data/employees.csv`
+- Purpose: synthetic dataset for local testing and demo flows
+
 ---
 
-## Roles y credenciales demo
+## Demo Roles and Credentials
 
-Para evaluar rápidamente el flujo por **roles**:
+To quickly test the role-based flow:
 
-- **HR** — `hr@example.com` / ``  
-- **Manager** — `manager@example.com` / `mgr123`  
+- **HR** — `hr@example.com`
+- **Manager** — `manager@example.com` / `mgr123`
 - **Analyst** — `analyst@example.com` / `ana123`
+
+> Update these credentials according to your local seed data or user creation flow.
+
 ---
 
-## Endpoints útiles
+## Useful Endpoints
 
-- **Docs de API**: <http://localhost:8000/docs> (Swagger UI – FastAPI)
+- **API Docs**: <http://localhost:8000/docs>
 - **ReDoc**: <http://localhost:8000/redoc>
 
-_Algunos endpoints de referencia (pueden variar según tu implementación):_
+Reference endpoints:
 
-- `POST /auth/login` – obtiene JWT
-- `GET /employees` – listado + filtros (ciudad, edad, género, educación, etc.)
-- `GET /reports/distribution?by=gender` – distribución básica por atributo
-- `GET /export/employees.csv` – exportación CSV
+- `POST /auth/login` — obtain a JWT token
+- `GET /employees` — get employee list with filters
+- `GET /reports/distribution?by=gender` — get a basic distribution by attribute
+- `GET /export/employees.csv` — export employee data as CSV
 
 ---
+
+## Project Scope
+
+This MVP focuses on a simple talent analytics workflow:
+
+- role-based access
+- employee data exploration
+- basic workforce visualization
+- CSV export for reporting
+- clean separation between frontend and backend in a monorepo structure
+
+It is intended as a practical portfolio project that demonstrates full-stack development, API design, authentication, reporting features, and dashboard-oriented UI work.
