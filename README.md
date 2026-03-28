@@ -1,10 +1,10 @@
 # Talent Allocation Analytics Platform
 
-A full-stack web application for workforce analytics, employee management, and talent allocation support.
+A full-stack web application for workforce analytics, employee management, and talent allocation.
 
-This project includes role-based authentication, employee management, workforce analytics dashboards, talent allocation search, bench tracking, and CSV export functionality. It is built as a monorepo with a React + TypeScript frontend and a FastAPI backend.
+This project provides role-based authentication, employee management workflows, workforce analytics dashboards, talent allocation search, bench tracking, and CSV export functionality. It is organized as a monorepo with a React + TypeScript frontend and a FastAPI backend.
 
-> **MVP summary**: role-based login (HR, Manager, Analyst), employee management, workforce analytics dashboards, talent allocation search, bench history tracking, CSV export, and sample data available in `/data`.
+> **Summary**: role-based login (HR, Manager, Analyst), employee management, workforce analytics dashboards, talent allocation search, bench history tracking, CSV export, and sample data available in `/data`.
 
 ---
 
@@ -23,7 +23,7 @@ This project includes role-based authentication, employee management, workforce 
   - [Installation and Run](#installation-and-run-1)
   - [NPM Tooling](#npm-tooling)
 - [Sample Data](#sample-data)
-- [Demo Roles and Credentials](#demo-roles-and-credentials)
+- [Local Demo Credentials](#demo-roles-and-credentials)
 - [Useful Endpoints](#useful-endpoints)
 - [Project Scope](#project-scope)
 
@@ -33,8 +33,8 @@ This project includes role-based authentication, employee management, workforce 
 
 - Role-based authentication with JWT
 - Employee directory with dynamic filters
-- Employee creation workflow
-- Workforce analytics dashboards and reports
+- Employee record creation and filtering workflows
+- Workforce analytics dashboards, reporting endpoints, and export flows
 - Talent allocation search based on profile criteria
 - Bench history tracking
 - CSV export for operational reporting
@@ -45,7 +45,7 @@ This project includes role-based authentication, employee management, workforce 
 ## Architecture and Stack
 
 - **Frontend**: React 18, TypeScript, Vite, Material UI, Recharts, React Query
-- **Backend**: FastAPI, Python 3.11, SQLAlchemy, Alembic, JWT authentication, role-based authorization, reporting and workforce operations endpoints
+- **Backend**: FastAPI, Python 3.11, SQLAlchemy, Alembic, JWT authentication, role-based authorization
 - **Database (development)**: SQLite for simplicity, with the option to migrate to PostgreSQL later
 - **Frontend tooling**: ESLint, Prettier, Vitest, React Testing Library
 - **Backend tooling**: pytest, Ruff, Black, optional mypy
@@ -64,6 +64,14 @@ This project includes role-based authentication, employee management, workforce 
 ```
 
 ---
+
+## Core Modules
+
+- **Authentication**: JWT-based login and role-aware access control
+- **Employees**: employee listing, filtering, and record creation
+- **Reports**: workforce distributions, attrition-related metrics, and exports
+- **Assignments**: profile search for talent allocation based on selected criteria
+- **Bench**: bench history registration and lifecycle tracking
 
 ## Requirements
 
@@ -186,7 +194,7 @@ npm i -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/user
 
 ---
 
-## Demo Roles and Credentials
+## Local Demo Credentials
 
 To quickly test the role-based flow:
 
@@ -205,14 +213,23 @@ To quickly test the role-based flow:
 
 Reference endpoints:
 
+### Authentication
 - `POST /auth/login` — obtain a JWT token
+
+### Employees
 - `GET /employees` — get employee list with filters
 - `POST /employees` — create a new employee record
+
+### Reports
 - `GET /reports/distribution` — get employee distributions by attribute
 - `GET /reports/leave_probability` — get attrition-related metrics
 - `GET /reports/correlation` — get correlation insights
 - `GET /reports/export_preset` — export predefined reports
+
+### Assignments
 - `GET /assignments/search` — search employee profiles for allocation
+
+### Bench
 - `GET /bench/employees/{employee_id}/events` — get bench history by employee
 - `POST /bench/employees/{employee_id}/events` — create a bench event
 - `PATCH /bench/events/{event_id}/end` — close a bench event
@@ -231,4 +248,9 @@ This MVP focuses on a workforce analytics and talent operations workflow:
 - CSV export for operational reporting
 - clean separation between frontend and backend in a monorepo structure
 
-It is intended as a practical portfolio project that demonstrates full-stack development, API design, authentication, reporting workflows, dashboard-oriented UI work, and business-focused internal tooling.
+## Notes
+
+- SQLite is used for local development.
+- Sample data is synthetic and intended for testing and demo flows.
+- Credentials and seeded records may vary depending on local setup.
+- The data layer can be migrated to PostgreSQL for a more production-oriented setup.
