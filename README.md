@@ -236,9 +236,7 @@ Reference endpoints:
 
 ---
 
-## Project Scope
-
-This MVP focuses on a workforce analytics and talent operations workflow:
+## Project Scopei
 
 - role-based access and protected views
 - employee data exploration and management
